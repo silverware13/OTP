@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+# compileall:
+# Compiles five programs with gcc.
+#
+# Zachary Thomas
+# Assignment 4
+# 3/3/2018
