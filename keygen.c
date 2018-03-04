@@ -7,8 +7,8 @@
 // Input:
 // The length of the key file.
 //
-// Return:
-// A random string of characters that ends with a newline.
+// Output:
+// A random string of characters that end with a newline.
 //
 // Zachary Thomas
 // Assignment 4
@@ -20,18 +20,26 @@
 
 int main (int argc, char *argv[]) {
 
-	srand(time(0)); // Seed our RNG.
+	// Confirm that the user entered a value or else return with error.
+	if(argv[1] == '\0') {
+		
+		fprintf(stderr, "Unspecified number of characters to output.\n"); 
+		return 1;
 	
+	}
+	
+	srand(time(0)); // Seed our RNG.
+		
 	// Array of valid ranodom chararacters.
 	char ranArray[28] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	char outStr[1000];
-	int charCount = 20;	
+	long charCount = strtol(argv[1], NULL, 10); // Convert the user input to a long.	
 
 	// Get the requested amount of random numbers.
 	int i, rnd;
 	for(i = 0; i < charCount; i++) {
 
-		rnd = rand() % 27 // Returns a number from 0 to 26.
+		rnd = rand() % 27; // Returns a number from 0 to 26.
 		printf("%c", ranArray[rnd]); // Print a random char from ranArray. 	
 		
 	}
