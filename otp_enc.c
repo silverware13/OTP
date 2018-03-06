@@ -29,10 +29,10 @@ int main(int argc, char *argv[])
 
 	// Set up the server address struct
 	memset((char*)&serverAddress, '\0', sizeof(serverAddress)); // Clear out the address struct
-	portNumber = atoi(argv[2]); // Get the port number, convert to an integer from a string
+	portNumber = atoi(argv[3]); // Get the port number, convert to an integer from a string
 	serverAddress.sin_family = AF_INET; // Create a network-capable socket
 	serverAddress.sin_port = htons(portNumber); // Store the port number
-	serverHostInfo = gethostbyname(argv[1]); // Convert the machine name into a special form of address
+	serverHostInfo = gethostbyname("localhost"); // Convert the machine name into a special form of address
 	if (serverHostInfo == NULL) { fprintf(stderr, "CLIENT: ERROR, no such host\n"); exit(0); }
 	memcpy((char*)&serverAddress.sin_addr.s_addr, (char*)serverHostInfo->h_addr, serverHostInfo->h_length); // Copy in the address
 
@@ -45,13 +45,16 @@ int main(int argc, char *argv[])
 		error("CLIENT: ERROR connecting");
 	
 	// Get input message from user
-	printf("CLIENT: Enter text to send to the server, and then hit enter: ");
-	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer array
-	fgets(buffer, sizeof(buffer) - 1, stdin); // Get input from the user, trunc to buffer - 1 chars, leaving \0.
+	//printf("CLIENT: Enter text to send to the server, and then hit enter: ");
+	//fgets(buffer, sizeof(buffer) - 1, stdin); // Get input from the user, trunc to buffer - 1 chars, leaving \0.
 	//buffer[0] = 'e'; // Set the 2nd to last char to e. This is validation that we are sending from otp_enc.
-	buffer[strcspn(buffer, "\n")] = '\0'; // Remove the trailing \n that fgets adds
+	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer array
+	FILE *plainText = fopen(argv[1], "r"); // Open the plain text file.
+	fgets(buffer, sizeof(buffer - 1), plainText); // Get input from plain text file, trunc to buffer -1 chars, leaving \0.
+	fclose(plainText); // Close the plain text file.
+	buffer[strcspn(buffer, "\n")] = '\0'; // Remove any trailing \n from file.
 
-	// Send message to server.
+	// Send plain text to server.
 	charsWritten = send(socketFD, buffer, strlen(buffer), 0); // Write to the server
 	if (charsWritten < 0) error("CLIENT: ERROR writing to socket");
 	if (charsWritten < strlen(buffer)) printf("CLIENT: WARNING: Not all data written to socket!\n");
