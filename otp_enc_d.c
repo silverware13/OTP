@@ -21,7 +21,7 @@ void error(const char *msg) { perror(msg); exit(1); } // Error function used for
 
 int main(int argc, char *argv[])
 {
-	int listenSocketFD, establishedConnectionFD, portNumber, charsRead;
+	int listenSocketFD, establishedConnectionFD, portNumber, charsRead, badConnection = 0;
 	socklen_t sizeOfClientInfo;
 	char buffer[256];
 	struct sockaddr_in serverAddress, clientAddress;
@@ -53,7 +53,17 @@ int main(int argc, char *argv[])
 	memset(buffer, '\0', 256);
 	charsRead = recv(establishedConnectionFD, buffer, 255, 0); // Read the client's message from the socket
 	if (charsRead < 0) error("ERROR reading from socket");
-	printf("SERVER: I received this from the client: \"%s\"\n", buffer);
+	printf("KEY: %c\n", buffer[254]);
+	//if (buffer[255] != 'e') {badConnection = 1;} // See if this is a valid connection.
+	if (badConnection) {
+		charsRead = send(establishedConnectionFD, "BAD", 3,0);
+		if (charsRead < 0) error("ERROR writing to socket");
+		close(establishedConnectionFD); // Close the existing socket which is connected to the client
+		close(listenSocketFD); // Close the listening socket
+		return 0;
+	}
+
+	if (!badConnection) {printf("SERVER: I received this from the client: \"%s\"\n", buffer);} // Only send message if valid connection.
 
 	// Send a Success message back to the client
 	charsRead = send(establishedConnectionFD, "I am the server, and I got your message", 39, 0); // Send success back
