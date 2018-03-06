@@ -23,9 +23,9 @@ int main(int argc, char *argv[])
 {
 	int listenSocketFD, establishedConnectionFD, portNumber, charsRead, badConnection = 0;
 	socklen_t sizeOfClientInfo;
-	char buffer[256];
+	char buffer[500000];
 	struct sockaddr_in serverAddress, clientAddress;
-
+	
 	if (argc < 2) { fprintf(stderr,"USAGE: %s port\n", argv[0]); exit(1); } // Check usage & args
 
 	// Set up the address struct for this process (the server)

@@ -16,14 +16,15 @@
 #include <netinet/in.h>
 #include <netdb.h> 
 
-void error(const char *msg) { perror(msg); exit(0); } // Error function used for reporting issues
+void error(const char *msg, int errVal) { perror(msg); exit(errVal); } // Error function used for reporting issues
 
 int main(int argc, char *argv[])
 {
 	int socketFD, portNumber, charsWritten, charsRead;
 	struct sockaddr_in serverAddress;
 	struct hostent* serverHostInfo;
-	char buffer[256];
+	char buffer[500000];
+	char keyBuffer[500000];
  
 	if (argc < 3) { fprintf(stderr,"USAGE: %s plaintext key port\n", argv[0]); exit(0); } // Check usage & args
 
@@ -38,34 +39,43 @@ int main(int argc, char *argv[])
 
 	// Set up the socket
 	socketFD = socket(AF_INET, SOCK_STREAM, 0); // Create the socket
-	if (socketFD < 0) error("CLIENT: ERROR opening socket");
+	if (socketFD < 0) error("CLIENT: ERROR opening socket", 1);
 	
 	// Connect to server
 	if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
-		error("CLIENT: ERROR connecting");
+		error("CLIENT: ERROR connecting", 1);
 	
-	// Get input message from user
-	//printf("CLIENT: Enter text to send to the server, and then hit enter: ");
-	//fgets(buffer, sizeof(buffer) - 1, stdin); // Get input from the user, trunc to buffer - 1 chars, leaving \0.
-	//buffer[0] = 'e'; // Set the 2nd to last char to e. This is validation that we are sending from otp_enc.
+	// Get input from plain text file.
 	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer array
 	FILE *plainText = fopen(argv[1], "r"); // Open the plain text file.
-	if(plainText == 0) error("CLIENT: ERROR, could not open plain text file");
-	fgets(buffer, sizeof(buffer - 1), plainText); // Get input from plain text file, trunc to buffer -1 chars, leaving \0.
+	if(plainText == 0) error("CLIENT: ERROR could not open plain text file", 1);
+	while(fgets(buffer, sizeof(buffer)-1, plainText)); // Get input from plain text file, trunc to buffer -1 chars, leaving \0.
+	buffer[strcspn(buffer, "\n")] = '\0'; // Replace the newline at the end of file with NULL.
 	fclose(plainText); // Close the plain text file.
-	buffer[strcspn(buffer, "\n")] = '\0'; // Remove any trailing \n from file.
-	printf("TEST: %s\n", buffer);
-
+	
+	// Get input from key file.
+	memset(keyBuffer, '\0', sizeof(keyBuffer)); // Clear out the buffer array
+	FILE *keyText = fopen(argv[2], "r"); // Open the key file.
+	if(keyText == 0) error("CLIENT: ERROR could not open key file", 1);
+	while(fgets(keyBuffer, sizeof(keyBuffer)-1, keyText)); // Get input from key file, trunc to buffer -1 chars, leaving \0.
+	keyBuffer[strcspn(keyBuffer, "\n")] = '\0'; // Replace the newline at the end of file with NULL.
+	fclose(keyText); // Close the key file.
+	
+	// Make sure that our key file is as large if not larger than our plain text file.
+	int keyLen = strlen(keyBuffer);
+	int plnLen = strlen(buffer);
+	if (plnLen > keyLen) error("CLIENT: ERROR plain text file is larger than key.", 1);
+	
 	// Send plain text to server.
 	charsWritten = send(socketFD, buffer, strlen(buffer), 0); // Write to the server
-	if (charsWritten < 0) error("CLIENT: ERROR writing to socket");
+	if (charsWritten < 0) error("CLIENT: ERROR writing to socket", 1);
 	if (charsWritten < strlen(buffer)) printf("CLIENT: WARNING: Not all data written to socket!\n");
 
 	// Get return message from server
 	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer again for reuse
 	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
-	if (charsRead < 0) error("CLIENT: ERROR reading from socket");
-	if(buffer[0] == 'B' && buffer[1] == 'A' && buffer[2] == 'D') { fprintf( stderr, "Connection rejected on port %d\n", portNumber); exit(2);} // We tried to make an invalid connection.
+	if (charsRead < 0) error("CLIENT: ERROR reading from socket", 1);
+	if(buffer[0] == 'B' && buffer[1] == 'A' && buffer[2] == 'D') error("CLIENT: Connection rejected on port %d", 2);
 	printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
 
 	close(socketFD); // Close the socket
