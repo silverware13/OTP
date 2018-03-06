@@ -53,7 +53,6 @@ int main(int argc, char *argv[])
 	memset(buffer, '\0', 256);
 	charsRead = recv(establishedConnectionFD, buffer, 255, 0); // Read the client's message from the socket
 	if (charsRead < 0) error("ERROR reading from socket");
-	printf("KEY: %c\n", buffer[254]);
 	//if (buffer[255] != 'e') {badConnection = 1;} // See if this is a valid connection.
 	if (badConnection) {
 		charsRead = send(establishedConnectionFD, "BAD", 3,0);

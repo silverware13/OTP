@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 	struct hostent* serverHostInfo;
 	char buffer[256];
  
-	if (argc < 3) { fprintf(stderr,"USAGE: %s hostname port\n", argv[0]); exit(0); } // Check usage & args
+	if (argc < 3) { fprintf(stderr,"USAGE: %s plaintext key port\n", argv[0]); exit(0); } // Check usage & args
 
 	// Set up the server address struct
 	memset((char*)&serverAddress, '\0', sizeof(serverAddress)); // Clear out the address struct
@@ -50,9 +50,11 @@ int main(int argc, char *argv[])
 	//buffer[0] = 'e'; // Set the 2nd to last char to e. This is validation that we are sending from otp_enc.
 	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer array
 	FILE *plainText = fopen(argv[1], "r"); // Open the plain text file.
+	if(plainText == 0) error("CLIENT: ERROR, could not open plain text file");
 	fgets(buffer, sizeof(buffer - 1), plainText); // Get input from plain text file, trunc to buffer -1 chars, leaving \0.
 	fclose(plainText); // Close the plain text file.
 	buffer[strcspn(buffer, "\n")] = '\0'; // Remove any trailing \n from file.
+	printf("TEST: %s\n", buffer);
 
 	// Send plain text to server.
 	charsWritten = send(socketFD, buffer, strlen(buffer), 0); // Write to the server
