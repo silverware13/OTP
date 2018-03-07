@@ -24,8 +24,8 @@ int main(int argc, char *argv[])
 	int socketFD, portNumber, charsWritten, charsRead;
 	struct sockaddr_in serverAddress;
 	struct hostent* serverHostInfo;
-	char buffer[500000];
-	char keyBuffer[500000];
+	char buffer[50000];
+	char keyBuffer[50000];
  
 	if (argc < 3) { fprintf(stderr,"USAGE: %s plaintext key port\n", argv[0]); exit(0); } // Check usage & args
 
@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
 	FILE *plainText = fopen(argv[1], "r"); // Open the plain text file.
 	if(plainText == 0) error("CLIENT: ERROR could not open plain text file", 1);
 	while(fgets(buffer, sizeof(buffer)-1, plainText)); // Get input from plain text file, trunc to buffer -1 chars, leaving \0.
+	buffer[strcspn(buffer, "\n")] = '%'; // Replace the newline at the end of file with '%'.
 	fclose(plainText); // Close the plain text file.
 	
 	// Get input from key file.
@@ -58,13 +59,18 @@ int main(int argc, char *argv[])
 	FILE *keyText = fopen(argv[2], "r"); // Open the key file.
 	if(keyText == 0) error("CLIENT: ERROR could not open key file", 1);
 	while(fgets(keyBuffer, sizeof(keyBuffer)-1, keyText)); // Get input from key file, trunc to buffer -1 chars, leaving \0.
-	keyBuffer[strcspn(keyBuffer, "\n")] = '\0'; // Replace the newline at the end of file with NULL.
+	keyBuffer[strcspn(keyBuffer, "\n")] = '@'; // Replace the newline at the end of file with '@'.
 	fclose(keyText); // Close the key file.
 	
 	// Make sure that our key file is as large if not larger than our plain text file.
 	int keyLen = strlen(keyBuffer);
 	int plnLen = strlen(buffer);
 	if (plnLen > keyLen) error("Error: key is too short", 1);
+
+	// send program id to server.
+	charsWritten = send(socketFD, "e#", strlen("e#"), 0); // Write to the server
+	if (charsWritten < 0) error("CLIENT: ERROR writing to socket", 1);
+	if (charsWritten < strlen("e#")) printf("CLIENT: WARNING: Not all data written to socket!\n");
 	
 	// Send plain text to server.
 	charsWritten = send(socketFD, buffer, strlen(buffer), 0); // Write to the server
@@ -80,7 +86,7 @@ int main(int argc, char *argv[])
 	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer again for reuse
 	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
 	if (charsRead < 0) error("CLIENT: ERROR reading from socket", 1);
-	if(buffer[0] == 'B' && buffer[1] == 'A' && buffer[2] == 'D') error("CLIENT: Connection rejected on port %d", 2);
+	if(buffer[0] == '!') error("CLIENT: Connection rejected on port %d", 2); // Server has rejected this connection.
 	printf("%s\n", buffer);
 
 	close(socketFD); // Close the socket
