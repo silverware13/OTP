@@ -71,6 +71,11 @@ int main(int argc, char *argv[])
 	if (charsWritten < 0) error("CLIENT: ERROR writing to socket", 1);
 	if (charsWritten < strlen(buffer)) printf("CLIENT: WARNING: Not all data written to socket!\n");
 
+	// Send key to server.
+	charsWritten = send(socketFD, keyBuffer, strlen(keyBuffer), 0); // Write to the server
+	if (charsWritten < 0) error("CLIENT: ERROR writing to socket", 1);
+	if (charsWritten < strlen(keyBuffer)) printf("CLIENT: WARNING: Not all data written to socket!\n");
+	
 	// Get return message from server
 	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer again for reuse
 	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
