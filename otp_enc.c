@@ -20,6 +20,7 @@ void error(const char *msg, int errVal) { perror(msg); exit(errVal); } // Error 
 
 int main(int argc, char *argv[])
 {
+
 	int socketFD, portNumber, charsWritten, charsRead;
 	struct sockaddr_in serverAddress;
 	struct hostent* serverHostInfo;
@@ -50,7 +51,6 @@ int main(int argc, char *argv[])
 	FILE *plainText = fopen(argv[1], "r"); // Open the plain text file.
 	if(plainText == 0) error("CLIENT: ERROR could not open plain text file", 1);
 	while(fgets(buffer, sizeof(buffer)-1, plainText)); // Get input from plain text file, trunc to buffer -1 chars, leaving \0.
-	buffer[strcspn(buffer, "\n")] = '\0'; // Replace the newline at the end of file with NULL.
 	fclose(plainText); // Close the plain text file.
 	
 	// Get input from key file.

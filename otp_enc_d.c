@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
 	int listenSocketFD, establishedConnectionFD, portNumber, charsRead, badConnection = 0;
 	socklen_t sizeOfClientInfo;
 	char buffer[500000];
+	char keyBuffer[500000];
 	struct sockaddr_in serverAddress, clientAddress;
 	
 	if (argc < 2) { fprintf(stderr,"USAGE: %s port\n", argv[0]); exit(1); } // Check usage & args
@@ -51,8 +52,32 @@ int main(int argc, char *argv[])
 
 	// Get the message from the client and display it
 	memset(buffer, '\0', 256);
+	memset(keyBuffer, '\0', 256);
 	charsRead = recv(establishedConnectionFD, buffer, 255, 0); // Read the client's message from the socket
 	if (charsRead < 0) error("ERROR reading from socket");
+	
+	// Split buffer up based on newline.
+	int i, ii, keySave = 0;
+	char tempChar = '\0';
+	ii = 0;
+	for(i = 0; buffer[i] != '\0'; i++) {
+	 	
+		// Newline means we are starting into the key buffer.
+		if(buffer[i] == '\n') {
+			keySave = 1;
+			buffer[i] = '\0';
+			i++;
+		}
+
+		// If we are looking at the key buffer save it.
+		if(keySave == 1) {
+			keyBuffer[ii]  = buffer[i]; // Save the current char.
+			ii++;
+			buffer[i] = '\0';	
+		}
+
+	} 	
+	
 	//if (buffer[255] != 'e') {badConnection = 1;} // See if this is a valid connection.
 	if (badConnection) {
 		charsRead = send(establishedConnectionFD, "BAD", 3,0);
@@ -62,7 +87,8 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	if (!badConnection) {printf("SERVER: I received this from the client: \"%s\"\n", buffer);} // Only send message if valid connection.
+	if (!badConnection) {printf("SERVER: Plain text from client: \"%s\"\n", buffer);} // Only send message if valid connection.
+	if (!badConnection) {printf("SERVER: key from client: \"%s\"\n", keyBuffer);} // Only send message if valid connection.
 
 	// Send a Success message back to the client
 	charsRead = send(establishedConnectionFD, "I am the server, and I got your message", 39, 0); // Send success back
@@ -70,4 +96,5 @@ int main(int argc, char *argv[])
 	close(establishedConnectionFD); // Close the existing socket which is connected to the client
 	close(listenSocketFD); // Close the listening socket
 	return 0; 
+
 }
