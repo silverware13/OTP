@@ -31,7 +31,7 @@ int main (int argc, char *argv[]) {
 	srand(time(0)); // Seed our RNG.
 		
 	// Array of valid ranodom chararacters.
-	char ranArray[28] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	char ranArray[28] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ";
 	char outStr[1000];
 	long charCount = strtol(argv[1], NULL, 10); // Convert the user input to a long.	
 

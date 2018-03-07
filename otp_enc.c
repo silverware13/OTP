@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 	// Make sure that our key file is as large if not larger than our plain text file.
 	int keyLen = strlen(keyBuffer);
 	int plnLen = strlen(buffer);
-	if (plnLen > keyLen) error("CLIENT: ERROR plain text file is larger than key.", 1);
+	if (plnLen > keyLen) error("Error: key is too short", 1);
 	
 	// Send plain text to server.
 	charsWritten = send(socketFD, buffer, strlen(buffer), 0); // Write to the server
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
 	if (charsRead < 0) error("CLIENT: ERROR reading from socket", 1);
 	if(buffer[0] == 'B' && buffer[1] == 'A' && buffer[2] == 'D') error("CLIENT: Connection rejected on port %d", 2);
-	printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+	printf("%s\n", buffer);
 
 	close(socketFD); // Close the socket
 	return 0;
