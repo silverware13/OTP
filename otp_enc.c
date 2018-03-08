@@ -16,18 +16,18 @@
 #include <netinet/in.h>
 #include <netdb.h> 
 
-void error(const char *msg, int errVal) { perror(msg); exit(errVal); } // Error function used for reporting issues
+void error(const char *msg, int errVal) { fprintf(stderr, "%s\n", msg); exit(errVal); } // Error function used for reporting issues
 
 int main(int argc, char *argv[])
 {
-
-	int socketFD, portNumber, charsWritten, charsRead;
+	
+	int socketFD, portNumber, charsWritten, charsRead, i, ii;
 	struct sockaddr_in serverAddress;
 	struct hostent* serverHostInfo;
 	char buffer[50000];
 	char keyBuffer[50000];
  
-	if (argc < 3) { fprintf(stderr,"USAGE: %s plaintext key port\n", argv[0]); exit(0); } // Check usage & args
+	if (argc < 3) { fprintf(stderr,"USAGE: %s plaintext key port\n", argv[0]); exit(1); } // Check usage & args
 
 	// Set up the server address struct
 	memset((char*)&serverAddress, '\0', sizeof(serverAddress)); // Clear out the address struct
@@ -35,59 +35,95 @@ int main(int argc, char *argv[])
 	serverAddress.sin_family = AF_INET; // Create a network-capable socket
 	serverAddress.sin_port = htons(portNumber); // Store the port number
 	serverHostInfo = gethostbyname("localhost"); // Convert the machine name into a special form of address
-	if (serverHostInfo == NULL) { fprintf(stderr, "CLIENT: ERROR, no such host\n"); exit(0); }
+	if (serverHostInfo == NULL)  error("Error: no such host\n", 1); 
 	memcpy((char*)&serverAddress.sin_addr.s_addr, (char*)serverHostInfo->h_addr, serverHostInfo->h_length); // Copy in the address
 
 	// Set up the socket
 	socketFD = socket(AF_INET, SOCK_STREAM, 0); // Create the socket
-	if (socketFD < 0) error("CLIENT: ERROR opening socket", 1);
+	if (socketFD < 0) error("Error: opening socket", 1);
 	
 	// Connect to server
 	if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
-		error("CLIENT: ERROR connecting", 1);
+		error("Error: connecting", 1);
 	
 	// Get input from plain text file.
 	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer array
 	FILE *plainText = fopen(argv[1], "r"); // Open the plain text file.
-	if(plainText == 0) error("CLIENT: ERROR could not open plain text file", 1);
+	if(plainText == 0) error("Error: could not open plain text file", 1);
 	while(fgets(buffer, sizeof(buffer)-1, plainText)); // Get input from plain text file, trunc to buffer -1 chars, leaving \0.
-	buffer[strcspn(buffer, "\n")] = '%'; // Replace the newline at the end of file with '%'.
 	fclose(plainText); // Close the plain text file.
+
+	// Make sure plain text file does not have any invalid chars. 
+	char charArray[29] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ \n";
+	int validChar;
+	for(i = 0; buffer[i] != '\0'; i++) {
+
+		validChar = 0;
+
+		// See if the current char is valid.
+		for(ii = 0; charArray[ii] != '\0'; ii++) {
+			if(buffer[i] == charArray[ii]) validChar = 1;
+		}
+		
+		// If we found an invalid char we throw an error here.
+		if(!validChar) error("Error: input contains bad characters", 1);
+		
+	}
+	if(!i) error("Error: no input characters in plain text file", 1);
+	buffer[strcspn(buffer, "\n")] = '%'; // Replace the newline at the end of file with '%'.
 	
 	// Get input from key file.
 	memset(keyBuffer, '\0', sizeof(keyBuffer)); // Clear out the buffer array
 	FILE *keyText = fopen(argv[2], "r"); // Open the key file.
-	if(keyText == 0) error("CLIENT: ERROR could not open key file", 1);
+	if(keyText == 0) error("Error: could not open key file", 1);
 	while(fgets(keyBuffer, sizeof(keyBuffer)-1, keyText)); // Get input from key file, trunc to buffer -1 chars, leaving \0.
-	keyBuffer[strcspn(keyBuffer, "\n")] = '@'; // Replace the newline at the end of file with '@'.
 	fclose(keyText); // Close the key file.
+	
+	// Make sure key file does not have any invalid chars. 
+	for(i = 0; keyBuffer[i] != '\0'; i++) {
+
+		validChar = 0;
+
+		// See if the current char is valid.
+		for(ii = 0; charArray[ii] != '\0'; ii++) {
+			if(keyBuffer[i] == charArray[ii]) validChar = 1;
+		}
+		
+		// If we found an invalid char we throw an error here.
+		if(!validChar) error("Error: input contains bad characters", 1);
+		
+	}
+	keyBuffer[strcspn(keyBuffer, "\n")] = '@'; // Replace the newline at the end of file with '@'.
 	
 	// Make sure that our key file is as large if not larger than our plain text file.
 	int keyLen = strlen(keyBuffer);
 	int plnLen = strlen(buffer);
 	if (plnLen > keyLen) error("Error: key is too short", 1);
 
-	// send program id to server.
-	charsWritten = send(socketFD, "e#", strlen("e#"), 0); // Write to the server
-	if (charsWritten < 0) error("CLIENT: ERROR writing to socket", 1);
-	if (charsWritten < strlen("e#")) printf("CLIENT: WARNING: Not all data written to socket!\n");
+	// Send program id to server.
+	do {
+		charsWritten = send(socketFD, "e#", strlen("e#"), 0); // Write to the server
+		if (charsWritten < 0) error("Error: writing to socket", 1);
+	} while (charsWritten < strlen("e#"));
 	
 	// Send plain text to server.
-	charsWritten = send(socketFD, buffer, strlen(buffer), 0); // Write to the server
-	if (charsWritten < 0) error("CLIENT: ERROR writing to socket", 1);
-	if (charsWritten < strlen(buffer)) printf("CLIENT: WARNING: Not all data written to socket!\n");
+	do {
+		charsWritten = send(socketFD, buffer, strlen(buffer), 0); // Write to the server
+		if (charsWritten < 0) error("Error: writing to socket", 1);
+	} while (charsWritten < strlen(buffer));
 
 	// Send key to server.
-	charsWritten = send(socketFD, keyBuffer, strlen(keyBuffer), 0); // Write to the server
-	if (charsWritten < 0) error("CLIENT: ERROR writing to socket", 1);
-	if (charsWritten < strlen(keyBuffer)) printf("CLIENT: WARNING: Not all data written to socket!\n");
+	do {
+		charsWritten = send(socketFD, keyBuffer, strlen(keyBuffer), 0); // Write to the server
+		if (charsWritten < 0) error("Error: writing to socket", 1);
+	} while (charsWritten < strlen(keyBuffer));
 	
 	// Get return message from server
 	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer again for reuse
 	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
-	if (charsRead < 0) error("CLIENT: ERROR reading from socket", 1);
-	if(buffer[0] == '!') error("CLIENT: Connection rejected on port %d", 2); // Server has rejected this connection.
-	printf("%s\n", buffer);
+	if (charsRead < 0) error("Error: reading from socket", 1);
+	if(buffer[0] == '!') { fprintf(stderr, "Error: connection rejected on port %d\n", portNumber); exit(2); } // Server has rejected this connection.
+	printf("%s\n", buffer); // Print the encrypted text.
 
 	close(socketFD); // Close the socket
 	return 0;
