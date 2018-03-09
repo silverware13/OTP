@@ -48,7 +48,6 @@ void childListen(int listenSocketFD, int establishedConnectionFD) {
 		charsRead = send(establishedConnectionFD, "!", 1,0);
 		if (charsRead < 0) error("ERROR writing to socket");
 		close(establishedConnectionFD); // Close the existing socket which is connected to the client
-		//close(listenSocketFD); // Close the listening socket
 		exit(1);
 	}
 	
@@ -118,7 +117,6 @@ void childListen(int listenSocketFD, int establishedConnectionFD) {
 	charsRead = send(establishedConnectionFD, encText, encLen, 0); // Send encrypted message back
 	if (charsRead < 0) error("ERROR writing to socket");
 	close(establishedConnectionFD); // Close the existing socket which is connected to the client
-	//close(listenSocketFD); // Close the listening socket
 	
 }
 
