@@ -1,9 +1,7 @@
 // otp_enc_d:
-// This program will run in the background as a daemon. 
-// Upon execution, otp_enc_d must output an error if it 
-// cannot be run due to a network error, such as the
-// ports being unavailable. Its function is to perform
-// the actual encoding.
+// This program listens for messages from clients.
+// When it recives a valid connection it takes in a message and encodes it.
+// Returning the encoded message to the client.
 //
 // Zachary Thomas
 // Assignment 4
@@ -19,9 +17,11 @@
 
 void error(const char *msg) { perror(msg); exit(1); } // Error function used for reporting issues
 
-// This function is used on children to establish a connection to the server.
-void childListen(int listenSocketFD, int establishedConnectionFD) {
+// The child connection function handles all message sending between client and server.
+// INPUT: The number for the established connection.
+void childConnection(int establishedConnectionFD) {
 
+	// Setup char arrays to hold messages.
 	int charsRead;
 	char buffer[100001];
 	char textBuffer[50001];
@@ -82,10 +82,6 @@ void childListen(int listenSocketFD, int establishedConnectionFD) {
 
 	} 	
 		
-	//printf("SERVER: buffer: \"%s\"\n", buffer); // Only send message if valid connection.
-	//printf("SERVER: Plain text from client: \"%s\"\n", textBuffer); // Only send message if valid connection.
-	//printf("SERVER: key from client: \"%s\"\n", keyBuffer); // Only send message if valid connection.
-	
 	// Encrypt plain text with key.
 	int valText = 0, valKey = 0, valSum = 0;
 	char charArray[29] = "!ABCDEFGHIJKLMNOPQRSTUVWXYZ ";
@@ -122,7 +118,8 @@ void childListen(int listenSocketFD, int establishedConnectionFD) {
 
 int main(int argc, char *argv[])
 {
-
+	
+	// Set up variables.
 	int listenSocketFD, establishedConnectionFD, portNumber, childSum = 0;
 	int childExitMethod = -5;
 	socklen_t sizeOfClientInfo;
@@ -176,14 +173,12 @@ int main(int argc, char *argv[])
 		
 				// This is the child.
 				case 0: {
-					childListen(listenSocketFD, establishedConnectionFD); // The child does something with the connection.	
+					childConnection(establishedConnectionFD); // The child handles messages from client to server.	
 				}
 
 				// This is the parent.
 				default: {
 					childSum += 1; // Increase the child count.
-					//close(establishedConnectionFD); // Close the existing socket which is connected to the client
-					//close(listenSocketFD); // Close the listening socket
 				}
 			}
 		}

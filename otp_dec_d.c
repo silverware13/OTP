@@ -1,8 +1,7 @@
 // otp_dec_d:
-// This program performs exactly like otp_enc_d,
-// in syntax and usage. In this case, however, otp_dec_d 
-// will decrypt ciphertext it is given, using the passed-in 
-// ciphertext and key. Thus, it returns plaintext again to otp_dec.
+// This program listens for messages from clients.
+// When it recives a valid connection it takes in a message and decodes it.
+// Returning the decoded message to the client.
 //
 // Zachary Thomas
 // Assignment 4
@@ -18,19 +17,21 @@
 
 void error(const char *msg) { perror(msg); exit(1); } // Error function used for reporting issues
 
-// This function is used on children to establish a connection to the server.
-void childListen(int listenSocketFD, int establishedConnectionFD) {
+// The child connection function handles all message sending between client and server.
+// INPUT: The number for the established connection.
+void childConnection(int establishedConnectionFD) {
 
+	// Setup up char arrays to hold messages.
 	int charsRead;
 	char buffer[100001];
 	char textBuffer[50001];
 	char keyBuffer[50001];
-	char encText[100001];
+	char decText[100001];
 	
 	memset(buffer, '\0', sizeof(buffer)); // Clear our buffer
 	memset(textBuffer, '\0', sizeof(textBuffer)); // Clear our textBuffer
 	memset(keyBuffer, '\0', sizeof(keyBuffer)); // Clear our keyBuffer
-	memset(encText, '\0', sizeof(encText)); // Clear our encText
+	memset(decText, '\0', sizeof(decText)); // Clear our decText
 	
 	// Get the message from the client and display it.
 	int bufLen; // Holds the buffer length.
@@ -81,10 +82,6 @@ void childListen(int listenSocketFD, int establishedConnectionFD) {
 
 	} 	
 		
-	//printf("SERVER: buffer: \"%s\"\n", buffer); // Only send message if valid connection.
-	//printf("SERVER: Plain text from client: \"%s\"\n", textBuffer); // Only send message if valid connection.
-	//printf("SERVER: key from client: \"%s\"\n", keyBuffer); // Only send message if valid connection.
-	
 	// Decrypt plain text with key.
 	int valText = 0, valKey = 0, valSum = 0;
 	char charArray[29] = "!ABCDEFGHIJKLMNOPQRSTUVWXYZ ";
@@ -106,14 +103,14 @@ void childListen(int listenSocketFD, int establishedConnectionFD) {
 			
 		// Find the decrypted char.
 		for(ii = 1; charArray[ii] != '\0'; ii++) {
-			if(valSum == ii) encText[i] = charArray[ii]; // Save the current decrypted char.
+			if(valSum == ii) decText[i] = charArray[ii]; // Save the current decrypted char.
 		}
 
 	}
 
 	// Send a Success message back to the client
-	int encLen = strlen(encText);
-	charsRead = send(establishedConnectionFD, encText, encLen, 0); // Send decrypted message back
+	int decLen = strlen(decText);
+	charsRead = send(establishedConnectionFD, decText, decLen, 0); // Send decrypted message back
 	if (charsRead < 0) error("ERROR writing to socket");
 	close(establishedConnectionFD); // Close the existing socket which is connected to the client
 	
@@ -122,6 +119,7 @@ void childListen(int listenSocketFD, int establishedConnectionFD) {
 int main(int argc, char *argv[])
 {
 
+	// Set up variables.
 	int listenSocketFD, establishedConnectionFD, portNumber, childSum = 0;
 	int childExitMethod = -5;
 	socklen_t sizeOfClientInfo;
@@ -175,14 +173,12 @@ int main(int argc, char *argv[])
 		
 				// This is the child.
 				case 0: {
-					childListen(listenSocketFD, establishedConnectionFD); // The child does something with the connection.	
+					childConnection(establishedConnectionFD); // The child handles messages from client to server.	
 				}
 
 				// This is the parent.
 				default: {
 					childSum += 1; // Increase the child count.
-					//close(establishedConnectionFD); // Close the existing socket which is connected to the client
-					//close(listenSocketFD); // Close the listening socket
 				}
 			}
 		}

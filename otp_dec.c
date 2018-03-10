@@ -21,14 +21,14 @@ void error(const char *msg, int errVal) { fprintf(stderr, "%s\n", msg); exit(err
 
 int main(int argc, char *argv[])
 {
-	
+	// Setup variables.	
 	int socketFD, portNumber, charsWritten, charsRead, i, ii;
 	struct sockaddr_in serverAddress;
 	struct hostent* serverHostInfo;
 	char buffer[50000];
 	char keyBuffer[50000];
  
-	if (argc < 3) { fprintf(stderr,"USAGE: %s plaintext key port\n", argv[0]); exit(1); } // Check usage & args
+	if (argc < 3) { fprintf(stderr,"USAGE: %s encryptedtext key port\n", argv[0]); exit(1); } // Check usage & args
 
 	// Set up the server address struct
 	memset((char*)&serverAddress, '\0', sizeof(serverAddress)); // Clear out the address struct
@@ -47,14 +47,14 @@ int main(int argc, char *argv[])
 	if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) // Connect socket to address
 		error("Error: connecting", 1);
 	
-	// Get input from plain text file.
+	// Get input from encrypted text file.
 	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer array
-	FILE *plainText = fopen(argv[1], "r"); // Open the plain text file.
-	if(plainText == 0) error("Error: could not open plain text file", 1);
-	while(fgets(buffer, sizeof(buffer)-1, plainText)); // Get input from plain text file, trunc to buffer -1 chars, leaving \0.
-	fclose(plainText); // Close the plain text file.
+	FILE *encText = fopen(argv[1], "r"); // Open the encrypted text file.
+	if(encText == 0) error("Error: could not open encrypted text file", 1);
+	while(fgets(buffer, sizeof(buffer)-1, encText)); // Get input from encrypted text file, trunc to buffer -1 chars, leaving \0.
+	fclose(encText); // Close the encrypted text file.
 
-	// Make sure plain text file does not have any invalid chars. 
+	// Make sure encrypted text file does not have any invalid chars. 
 	char charArray[29] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ \n";
 	int validChar;
 	for(i = 0; buffer[i] != '\0'; i++) {
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 		if(!validChar) error("Error: input contains bad characters", 1);
 		
 	}
-	if(!i) error("Error: no input characters in plain text file", 1);
+	if(i == 0) error("Error: encrypted text file is empty", 1);
 	buffer[strcspn(buffer, "\n")] = '%'; // Replace the newline at the end of file with '%'.
 	
 	// Get input from key file.
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 	}
 	keyBuffer[strcspn(keyBuffer, "\n")] = '@'; // Replace the newline at the end of file with '@'.
 	
-	// Make sure that our key file is as large if not larger than our plain text file.
+	// Make sure that our key file is as large if not larger than our encrypted text file.
 	int keyLen = strlen(keyBuffer);
 	int plnLen = strlen(buffer);
 	if (plnLen > keyLen) error("Error: key is too short", 1);
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 		if (charsWritten < 0) error("Error: writing to socket", 1);
 	} while (charsWritten < strlen("d#"));
 	
-	// Send plain text to server.
+	// Send encrypted text to server.
 	do {
 		charsWritten = send(socketFD, buffer, strlen(buffer), 0); // Write to the server
 		if (charsWritten < 0) error("Error: writing to socket", 1);
@@ -123,8 +123,8 @@ int main(int argc, char *argv[])
 	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer again for reuse
 	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
 	if (charsRead < 0) error("Error: reading from socket", 1);
-	if(buffer[0] == '!') { fprintf(stderr, "Error: connection rejected on port %d\n", portNumber); exit(2); } // Server has rejected this connection.
-	printf("%s\n", buffer); // Print the encrypted text.
+	if(buffer[0] == '!') { fprintf(stderr, "Error: could not contact otp_dec_d on port %d\n", portNumber); exit(2); } // Server has rejected this connection.
+	printf("%s\n", buffer); // Print the plain text.
 
 	close(socketFD); // Close the socket
 	return 0;

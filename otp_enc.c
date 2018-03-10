@@ -20,7 +20,7 @@ void error(const char *msg, int errVal) { fprintf(stderr, "%s\n", msg); exit(err
 
 int main(int argc, char *argv[])
 {
-	
+	// Setup variables.	
 	int socketFD, portNumber, charsWritten, charsRead, i, ii;
 	struct sockaddr_in serverAddress;
 	struct hostent* serverHostInfo;
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 		if(!validChar) error("Error: input contains bad characters", 1);
 		
 	}
-	if(!i) error("Error: no input characters in plain text file", 1);
+	if(i == 0) error("Error: plain text file is empty", 1);
 	buffer[strcspn(buffer, "\n")] = '%'; // Replace the newline at the end of file with '%'.
 	
 	// Get input from key file.
@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer again for reuse
 	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
 	if (charsRead < 0) error("Error: reading from socket", 1);
-	if(buffer[0] == '!') { fprintf(stderr, "Error: connection rejected on port %d\n", portNumber); exit(2); } // Server has rejected this connection.
+	if(buffer[0] == '!') { fprintf(stderr, "Error: could not contact otp_enc_d on port %d\n", portNumber); exit(2); } // Server has rejected this connection.
 	printf("%s\n", buffer); // Print the encrypted text.
 
 	close(socketFD); // Close the socket
