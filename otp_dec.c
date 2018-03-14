@@ -25,8 +25,8 @@ int main(int argc, char *argv[])
 	int socketFD, portNumber, charsWritten, charsRead, i, ii;
 	struct sockaddr_in serverAddress;
 	struct hostent* serverHostInfo;
-	char buffer[50000];
-	char keyBuffer[50000];
+	char buffer[500000];
+	char keyBuffer[500000];
  
 	if (argc < 3) { fprintf(stderr,"USAGE: %s encryptedtext key port\n", argv[0]); exit(1); } // Check usage & args
 
@@ -119,11 +119,21 @@ int main(int argc, char *argv[])
 		if (charsWritten < 0) error("Error: writing to socket", 1);
 	} while (charsWritten < strlen(keyBuffer));
 	
-	// Get return message from server
+	// Get the message from the server and display it.
 	memset(buffer, '\0', sizeof(buffer)); // Clear out the buffer again for reuse
-	charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); // Read data from the socket, leaving \0 at end
-	if (charsRead < 0) error("Error: reading from socket", 1);
-	if(buffer[0] == '!') { fprintf(stderr, "Error: could not contact otp_dec_d on port %d\n", portNumber); exit(2); } // Server has rejected this connection.
+	int bufLen; // Holds the buffer length.
+	int bufSum = 0; // The number of chars we have writen to our buffer
+	do {
+		charsRead = recv(socketFD, &buffer[bufSum], 100, 0); // Read the client's message from the socket
+		bufSum += charsRead; // Get the number of chars read and add it to our sum.
+		bufLen = strlen(buffer); // Get the current length of the string in the buffer.
+		if (charsRead < 0) error("ERROR reading from socket", 1);
+	} while (buffer[bufLen-1] != '@'); // Keep reading until we find the @ terminating char.
+	
+	buffer[bufLen-1] = '\0'; // Replace @ at the end of our message with NULL.
+	
+	// Server has rejected this connection. Most likely we sent this to the wrong server.
+	if(buffer[0] == '!') { fprintf(stderr, "Error: could not contact otp_dec_d on port %d\n", portNumber); exit(2); } 
 	printf("%s\n", buffer); // Print the plain text.
 
 	close(socketFD); // Close the socket

@@ -23,10 +23,11 @@ void childConnection(int establishedConnectionFD) {
 
 	// Setup up char arrays to hold messages.
 	int charsRead;
-	char buffer[100001];
-	char textBuffer[50001];
-	char keyBuffer[50001];
-	char decText[100001];
+	int charsWritten;
+	char buffer[1100000];
+	char textBuffer[500001];
+	char keyBuffer[500001];
+	char decText[1100000];
 	
 	memset(buffer, '\0', sizeof(buffer)); // Clear our buffer
 	memset(textBuffer, '\0', sizeof(textBuffer)); // Clear our textBuffer
@@ -37,16 +38,16 @@ void childConnection(int establishedConnectionFD) {
 	int bufLen; // Holds the buffer length.
 	int bufSum = 0; // The number of chars we have writen to our buffer
 	do {
-		charsRead = recv(establishedConnectionFD, &buffer[bufSum], 100, 0); // Read the client's message from the socket
+		charsRead = recv(establishedConnectionFD, &buffer[bufSum], 1000, 0); // Read the client's message from the socket
 		bufSum += charsRead; // Get the number of chars read and add it to our sum.
 		bufLen = strlen(buffer); // Get the current length of the string in the buffer.
+		if (charsRead < 0) error("ERROR reading from socket");
 	} while (buffer[bufLen-1] != '@'); // Keep reading until we find the @ terminating char.
-	if (charsRead < 0) error("ERROR reading from socket");
 	
 	// See if otp_dec is trying to connect, otherwise refuse connection.
 	if (buffer[0] != 'd' || buffer[1] != '#') {
-		charsRead = send(establishedConnectionFD, "!", 1,0);
-		if (charsRead < 0) error("ERROR writing to socket");
+		charsWritten = send(establishedConnectionFD, "!@", strlen("!@"), 0);
+		if (charsWritten < 0) error("ERROR writing to socket");
 		close(establishedConnectionFD); // Close the existing socket which is connected to the client
 		exit(1);
 	}
@@ -108,10 +109,18 @@ void childConnection(int establishedConnectionFD) {
 
 	}
 
-	// Send a Success message back to the client
+	// Send a the decrypted text back to the client
 	int decLen = strlen(decText);
-	charsRead = send(establishedConnectionFD, decText, decLen, 0); // Send decrypted message back
-	if (charsRead < 0) error("ERROR writing to socket");
+	do {
+		charsWritten = send(establishedConnectionFD, decText, decLen, 0); // Write to client.
+		if (charsWritten < 0) error("Error: writing to socket");
+	} while (charsWritten < decLen);
+	
+	do {
+		charsWritten = send(establishedConnectionFD, "@", strlen("@"), 0); // Write '@' at the end of our message to client.
+		if (charsWritten < 0) error("Error: writing to socket");
+	} while (charsWritten < strlen("@"));
+	
 	close(establishedConnectionFD); // Close the existing socket which is connected to the client
 	
 }
