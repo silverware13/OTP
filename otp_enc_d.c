@@ -190,6 +190,8 @@ int main(int argc, char *argv[])
 					childSum += 1; // Increase the child count.
 				}
 			}
+		} else {
+			if((childPID = waitpid(-1, &childExitMethod, 0)) > 0) childSum += -1; // If we already have five children just wait here for a child to finish and reap it.
 		}
 	}
 	
